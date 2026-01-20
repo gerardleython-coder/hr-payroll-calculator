@@ -5,17 +5,28 @@ import { PrismaModule } from './prisma/prisma.module';
 import { PayrollModule } from './payroll/payroll.module';
 import { EmployeesModule } from './employees/employees.module';
 import { ContractsModule } from './contracts/contracts.module';
+import { AuthModule } from './auth/auth.module';
+import { JwtAuthGuard } from './auth/infrastructure/guards/jwt-auth.guard';
 
 const disableThrottler =
   process.env.DISABLE_THROTTLER === '1' || process.env.NODE_ENV === 'test';
 
+const disableJwtAuth = process.env.NODE_ENV === 'test';
+
 const imports: any[] = [
   PrismaModule,
+  AuthModule,
   PayrollModule,
   EmployeesModule,
   ContractsModule,
 ];
 const providers = [] as any[];
+
+// Apply JWT authentication globally to all endpoints (RN-10.3)
+// Disabled in test environment to allow E2E tests to run without authentication
+if (!disableJwtAuth) {
+  providers.push({ provide: APP_GUARD, useClass: JwtAuthGuard });
+}
 
 if (!disableThrottler) {
   // cast to any because ThrottlerModule.forRoot returns a DynamicModule

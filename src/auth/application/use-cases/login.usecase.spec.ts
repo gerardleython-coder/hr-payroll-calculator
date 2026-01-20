@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/unbound-method */
 import { UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { LoginUseCase } from './login.usecase';
@@ -10,17 +11,17 @@ describe('LoginUseCase', () => {
   beforeEach(() => {
     jwtService = {
       sign: jest.fn(),
-    } as any;
+    } as unknown as JwtService;
 
     usecase = new LoginUseCase(jwtService);
   });
 
   describe('execute', () => {
-    it('should return access token and user when credentials are valid', async () => {
+    it('should return access token and user when credentials are valid', () => {
       const mockToken = 'mock.jwt.token';
       (jwtService.sign as jest.Mock).mockReturnValue(mockToken);
 
-      const result = await usecase.execute({
+      const result = usecase.execute({
         username: 'admin',
         password: 'admin123',
       });
@@ -41,49 +42,49 @@ describe('LoginUseCase', () => {
       });
     });
 
-    it('should throw UnauthorizedException when username is incorrect', async () => {
-      await expect(
+    it('should throw UnauthorizedException when username is incorrect', () => {
+      expect(() =>
         usecase.execute({
           username: 'wronguser',
           password: 'admin123',
         }),
-      ).rejects.toThrow(UnauthorizedException);
+      ).toThrow(UnauthorizedException);
 
-      await expect(
+      expect(() =>
         usecase.execute({
           username: 'wronguser',
           password: 'admin123',
         }),
-      ).rejects.toThrow('Credenciales inválidas');
+      ).toThrow('Credenciales inválidas');
 
       expect(jwtService.sign).not.toHaveBeenCalled();
     });
 
-    it('should throw UnauthorizedException when password is incorrect', async () => {
-      await expect(
+    it('should throw UnauthorizedException when password is incorrect', () => {
+      expect(() =>
         usecase.execute({
           username: 'admin',
           password: 'wrongpassword',
         }),
-      ).rejects.toThrow(UnauthorizedException);
+      ).toThrow(UnauthorizedException);
 
-      await expect(
+      expect(() =>
         usecase.execute({
           username: 'admin',
           password: 'wrongpassword',
         }),
-      ).rejects.toThrow('Credenciales inválidas');
+      ).toThrow('Credenciales inválidas');
 
       expect(jwtService.sign).not.toHaveBeenCalled();
     });
 
-    it('should throw UnauthorizedException when both username and password are incorrect', async () => {
-      await expect(
+    it('should throw UnauthorizedException when both username and password are incorrect', () => {
+      expect(() =>
         usecase.execute({
           username: 'wronguser',
           password: 'wrongpassword',
         }),
-      ).rejects.toThrow(UnauthorizedException);
+      ).toThrow(UnauthorizedException);
 
       expect(jwtService.sign).not.toHaveBeenCalled();
     });

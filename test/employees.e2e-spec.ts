@@ -19,8 +19,8 @@ describe('Employees API (e2e)', () => {
     })
       .overrideProvider(APP_GUARD)
       .useValue({ canActivate: () => true })
-      .overrideProvider(ThrottlerGuard)
-      .useValue({ canActivate: () => true, onModuleInit: () => {} })
+      .overrideGuard(ThrottlerGuard)
+      .useValue({ canActivate: () => true })
       .compile();
 
     app = moduleRef.createNestApplication();

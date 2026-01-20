@@ -21,6 +21,7 @@ import { FindPayrollRulesUseCase } from '../../application/use-cases/find-payrol
 import { FindPayrollRuleUseCase } from '../../application/use-cases/find-payroll-rule.usecase';
 import { UpdatePayrollRuleUseCase } from '../../application/use-cases/update-payroll-rule.usecase';
 import { DeletePayrollRuleUseCase } from '../../application/use-cases/delete-payroll-rule.usecase';
+import { Public } from '../../../auth/infrastructure/decorators/public.decorator';
 
 @Controller('payroll')
 export class PayrollController {
@@ -70,6 +71,7 @@ export class PayrollController {
     return this.deleteRuleUseCase.execute(id);
   }
 
+  @Public()
   @Get('health')
   health() {
     return { status: 'ok' };
