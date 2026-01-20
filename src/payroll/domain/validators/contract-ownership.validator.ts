@@ -7,6 +7,8 @@ import type {
 /**
  * Validates that the contract belongs to the specified employee.
  * This is the second validator in the chain (RN-9.2).
+ *
+ * @throws {BadRequestException} When contract belongs to a different employee
  */
 @Injectable()
 export class ContractOwnershipValidator implements IPayrollValidator {
@@ -23,6 +25,7 @@ export class ContractOwnershipValidator implements IPayrollValidator {
         ),
       );
     }
+
     return Promise.resolve();
   }
 }
