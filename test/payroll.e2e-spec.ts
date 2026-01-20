@@ -131,4 +131,163 @@ describe('Payroll API (e2e)', () => {
     const res = await request(server).get('/payroll/runs').expect(200);
     expect(Array.isArray(res.body)).toBe(true);
   });
+
+  describe('HU-09: Contract Validation', () => {
+    it('should reject payroll calculation with inactive contract', async () => {
+      // Arrange: Create employee and inactive contract
+      const emp = await request(server)
+        .post('/employees')
+        .send({
+          name: 'Test Employee',
+          email: `test.inactive.${Date.now()}@mail.com`,
+        })
+        .expect(201);
+
+      const employeeId = emp.body.id as string;
+
+      const contract = await request(server)
+        .post('/contracts')
+        .send({
+          employeeId,
+          contractType: 'EMPLOYEE',
+          baseSalary: 3_000_000,
+          active: false, // Inactive contract
+        })
+        .expect(201);
+
+      const contractId = contract.body.id as string;
+
+      // Act & Assert: Try to calculate payroll with inactive contract
+      const res = await request(server)
+        .post('/payroll/runs')
+        .send({
+          employeeId,
+          contractId,
+          period: '2026-01',
+          bonuses: 0,
+        })
+        .expect(400);
+
+      expect(res.body.message).toContain('El contrato no está activo');
+    });
+
+    it('should reject payroll calculation with non-existent contract', async () => {
+      // Arrange: Create employee only
+      const emp = await request(server)
+        .post('/employees')
+        .send({
+          name: 'Test Employee',
+          email: `test.nocontract.${Date.now()}@mail.com`,
+        })
+        .expect(201);
+
+      const employeeId = emp.body.id as string;
+      const fakeContractId = '00000000-0000-0000-0000-000000000999';
+
+      // Act & Assert: Try to calculate payroll with non-existent contract
+      const res = await request(server)
+        .post('/payroll/runs')
+        .send({
+          employeeId,
+          contractId: fakeContractId,
+          period: '2026-01',
+          bonuses: 0,
+        })
+        .expect(404);
+
+      expect(res.body.message).toContain('Contrato no encontrado');
+    });
+
+    it('should reject payroll calculation with contract from different employee', async () => {
+      // Arrange: Create two employees with their contracts
+      const emp1 = await request(server)
+        .post('/employees')
+        .send({
+          name: 'Employee 1',
+          email: `emp1.${Date.now()}@mail.com`,
+        })
+        .expect(201);
+
+      const emp2 = await request(server)
+        .post('/employees')
+        .send({
+          name: 'Employee 2',
+          email: `emp2.${Date.now()}@mail.com`,
+        })
+        .expect(201);
+
+      const employeeId1 = emp1.body.id as string;
+      const employeeId2 = emp2.body.id as string;
+
+      const contract2 = await request(server)
+        .post('/contracts')
+        .send({
+          employeeId: employeeId2,
+          contractType: 'EMPLOYEE',
+          baseSalary: 3_000_000,
+          active: true,
+        })
+        .expect(201);
+
+      const contractId2 = contract2.body.id as string;
+
+      // Act & Assert: Try to calculate payroll for emp1 with emp2's contract
+      const res = await request(server)
+        .post('/payroll/runs')
+        .send({
+          employeeId: employeeId1,
+          contractId: contractId2,
+          period: '2026-01',
+          bonuses: 0,
+        })
+        .expect(400);
+
+      expect(res.body.message).toContain(
+        'El contrato no pertenece al empleado especificado',
+      );
+    });
+
+    it('should successfully calculate payroll with active contract', async () => {
+      // Arrange: Create employee and active contract
+      const emp = await request(server)
+        .post('/employees')
+        .send({
+          name: 'Test Employee',
+          email: `test.active.${Date.now()}@mail.com`,
+        })
+        .expect(201);
+
+      const employeeId = emp.body.id as string;
+
+      const contract = await request(server)
+        .post('/contracts')
+        .send({
+          employeeId,
+          contractType: 'EMPLOYEE',
+          baseSalary: 3_000_000,
+          active: true, // Active contract
+        })
+        .expect(201);
+
+      const contractId = contract.body.id as string;
+
+      // Act & Assert: Calculate payroll successfully
+      const res = await request(server)
+        .post('/payroll/runs')
+        .send({
+          employeeId,
+          contractId,
+          period: '2026-01',
+          bonuses: 200_000,
+        })
+        .expect(201);
+
+      const body = res.body as PayrollRunResponse;
+      expect(body).toHaveProperty('id');
+      expect(body.employeeId).toBe(employeeId);
+      expect(body.contractId).toBe(contractId);
+      expect(typeof body.gross).toBe('number');
+      expect(typeof body.net).toBe('number');
+    });
+  });
 });
