@@ -182,7 +182,8 @@ describe('Payroll API (e2e)', () => {
         .expect(201);
 
       const employeeId = emp.body.id as string;
-      const fakeContractId = '00000000-0000-0000-0000-000000000999';
+      // Use a properly formatted UUID v4 that doesn't exist
+      const fakeContractId = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
 
       // Act & Assert: Try to calculate payroll with non-existent contract
       const res = await request(server)

@@ -47,9 +47,17 @@ describe('CreatePayrollRunUseCase', () => {
     prisma.employee.findUnique.mockResolvedValue({ id: 'e1' });
     prisma.contract.findFirst.mockResolvedValue(null);
 
+    // Mock validator that throws NotFoundException (simulates ContractExistsValidator)
+    const mockValidator = {
+      validate: jest
+        .fn()
+        .mockRejectedValue(new NotFoundException('Contrato no encontrado')),
+    };
+
     const usecase = new CreatePayrollRunUseCase(
       prisma as any,
       makeCalculator() as any,
+      [mockValidator],
     );
 
     await expect(
@@ -70,11 +78,24 @@ describe('CreatePayrollRunUseCase', () => {
       employeeId: 'e2',
       contractType: 'EMPLOYEE',
       baseSalary: 1000,
+      active: true,
     });
+
+    // Mock validator that throws BadRequestException (simulates ContractOwnershipValidator)
+    const mockValidator = {
+      validate: jest
+        .fn()
+        .mockRejectedValue(
+          new BadRequestException(
+            'El contrato no pertenece al empleado especificado',
+          ),
+        ),
+    };
 
     const usecase = new CreatePayrollRunUseCase(
       prisma as any,
       makeCalculator() as any,
+      [mockValidator],
     );
 
     await expect(
@@ -97,6 +118,7 @@ describe('CreatePayrollRunUseCase', () => {
       employeeId: 'e1',
       contractType: 'EMPLOYEE',
       baseSalary: 2500000,
+      active: true,
     } as ContractModel);
 
     const calculator = makeCalculator();
@@ -112,9 +134,17 @@ describe('CreatePayrollRunUseCase', () => {
 
     prisma.payrollRun.create.mockResolvedValue({ id: 'r1' } as { id: string });
 
+    // Mock validators that pass (no rejection)
+    const mockValidators = [
+      { validate: jest.fn().mockResolvedValue(undefined) },
+      { validate: jest.fn().mockResolvedValue(undefined) },
+      { validate: jest.fn().mockResolvedValue(undefined) },
+    ];
+
     const usecase = new CreatePayrollRunUseCase(
       prisma as any,
       calculator as any,
+      mockValidators,
     );
 
     const res = await usecase.execute({

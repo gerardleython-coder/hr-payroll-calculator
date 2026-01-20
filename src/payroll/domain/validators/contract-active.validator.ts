@@ -17,7 +17,9 @@ export class ContractActiveValidator implements IPayrollValidator {
     }
 
     if (!context.contract.active) {
-      throw new BadRequestException('El contrato no está activo');
+      return Promise.reject(
+        new BadRequestException('El contrato no está activo'),
+      );
     }
     return Promise.resolve();
   }

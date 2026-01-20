@@ -17,8 +17,10 @@ export class ContractOwnershipValidator implements IPayrollValidator {
     }
 
     if (context.contract.employeeId !== context.employeeId) {
-      throw new BadRequestException(
-        'El contrato no pertenece al empleado especificado',
+      return Promise.reject(
+        new BadRequestException(
+          'El contrato no pertenece al empleado especificado',
+        ),
       );
     }
     return Promise.resolve();

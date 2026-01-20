@@ -12,7 +12,7 @@ import type {
 export class ContractExistsValidator implements IPayrollValidator {
   validate(context: PayrollValidationContext): Promise<void> {
     if (!context.contract) {
-      throw new NotFoundException('Contrato no encontrado');
+      return Promise.reject(new NotFoundException('Contrato no encontrado'));
     }
     return Promise.resolve();
   }
