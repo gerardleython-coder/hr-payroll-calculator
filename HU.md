@@ -264,6 +264,68 @@ Feature: HU-09 Validación de Contrato Activo para Cálculo de Nómina
 
 ---
 
+---
+
+### HU-10 — Autenticación JWT para Administrador
+
+```gherkin
+Feature: HU-10 Autenticación JWT para Administrador
+  Como administrador del sistema
+  Quiero autenticarme con usuario y contraseña
+  Para acceder de forma segura a los endpoints de la API
+
+  Background:
+    Given existe un usuario administrador predeterminado
+    And el usuario tiene username "admin" y password "admin123"
+
+  Scenario: Login exitoso con credenciales válidas
+    Given un payload válido:
+      """
+      { "username": "admin", "password": "admin123" }
+      """
+    When envío una solicitud POST a "/auth/login"
+    Then la respuesta debe tener código 200
+    And el body debe contener "accessToken" como string
+    And el body debe contener "user" con "username" y "role"
+
+  Scenario: Login fallido con contraseña incorrecta
+    Given un payload con contraseña incorrecta:
+      """
+      { "username": "admin", "password": "wrongpassword" }
+      """
+    When envío una solicitud POST a "/auth/login"
+    Then la respuesta debe tener código 401
+    And el mensaje debe ser "Credenciales inválidas"
+
+  Scenario: Login fallido con usuario inexistente
+    Given un payload con usuario inexistente:
+      """
+      { "username": "noexiste", "password": "admin123" }
+      """
+    When envío una solicitud POST a "/auth/login"
+    Then la respuesta debe tener código 401
+    And el mensaje debe ser "Credenciales inválidas"
+
+  Scenario: Acceso a endpoint protegido sin token
+    When envío una solicitud GET a "/payroll/runs" sin header Authorization
+    Then la respuesta debe tener código 401
+    And el mensaje debe contener "Unauthorized"
+
+  Scenario: Acceso a endpoint protegido con token válido
+    Given tengo un token JWT válido obtenido del login
+    When envío una solicitud GET a "/payroll/runs" con header "Authorization: Bearer {token}"
+    Then la respuesta debe tener código 200
+    And debo recibir la lista de payroll runs
+
+  Scenario: Acceso a endpoint protegido con token inválido
+    Given tengo un token JWT inválido o malformado
+    When envío una solicitud GET a "/payroll/runs" con header "Authorization: Bearer {token}"
+    Then la respuesta debe tener código 401
+    And el mensaje debe contener "Unauthorized"
+```
+
+---
+
 ### Notas
 - Estas HUs reflejan las implementaciones actuales de `payroll` y las nuevas rutas/servicios de `employees`.
 - Mantener los escenarios como contratos de alto nivel; los tests e2e concretos deben mapearse a estos HUs.

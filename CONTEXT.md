@@ -75,6 +75,59 @@ Resumen conciso del repositorio para uso por herramientas de IA y nuevos desarro
 - **Interface Segregation:** Interfaz `IPayrollValidator` con un único método `validate(context): Promise<void>`.
 - **Dependency Inversion:** El UseCase depende de la abstracción `IPayrollValidator[]`, no de implementaciones concretas.
 
+### Reglas de negocio para HU-10: Autenticación JWT
+
+**RN-10.1: Validación de Credenciales**
+- El username y password son obligatorios en el payload de login.
+- Las credenciales se validan contra un usuario administrador predeterminado hardcodeado.
+- Usuario predeterminado: `username: "admin"`, `password: "admin123"`.
+- Si las credenciales son inválidas, retornar HTTP 401 con mensaje genérico "Credenciales inválidas" (no revelar si el usuario existe o no).
+
+**RN-10.2: Generación de Token JWT**
+- Al login exitoso, generar un token JWT que contenga: `userId`, `username`, `role`.
+- El token debe tener un tiempo de expiración de 8 horas (`8h`).
+- La clave secreta debe obtenerse de la variable de entorno `JWT_SECRET`.
+- El token se retorna en el campo `accessToken` junto con información básica del usuario.
+
+**RN-10.3: Protección de Endpoints**
+- Todos los endpoints de la API requieren autenticación JWT, excepto:
+  - `POST /auth/login` (público)
+  - `GET /payroll/health` (público)
+- El token debe enviarse en el header HTTP: `Authorization: Bearer {token}`.
+- Si el token es inválido, está malformado o ha expirado, retornar HTTP 401 con mensaje "Unauthorized".
+- Si no se proporciona token, retornar HTTP 401 con mensaje "Unauthorized".
+
+**RN-10.4: Estructura de Respuesta de Login**
+- Respuesta exitosa (200):
+  ```json
+  {
+    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "user": {
+      "id": "admin-001",
+      "username": "admin",
+      "role": "ADMIN"
+    }
+  }
+  ```
+- Respuesta de error (401):
+  ```json
+  {
+    "statusCode": 401,
+    "message": "Credenciales inválidas"
+  }
+  ```
+
+**RN-10.5: Seguridad**
+- Nunca retornar el password en ninguna respuesta de la API.
+- Los mensajes de error de autenticación deben ser genéricos para evitar enumeración de usuarios.
+- El rate limiting existente (Throttler) se mantiene activo para prevenir ataques de fuerza bruta.
+
+**RN-10.6: Patrón de Diseño y SOLID**
+- **Patrón:** Strategy Pattern para la validación JWT (usando Passport.js).
+- **Single Responsibility:** `LoginUseCase` solo maneja la lógica de login, `JwtStrategy` solo valida tokens.
+- **Open/Closed:** Se puede extender a otros métodos de autenticación sin modificar código existente.
+- **Dependency Inversion:** Los controllers dependen de abstracciones (UseCases), no de implementaciones concretas.
+
 ## Donde empezar para entender el dominio
 - Lógica de cálculo: `src/payroll/domain/services/payroll.calculator.template.ts`
 - Estrategias: `src/payroll/domain/services/tax.strategy.ts`
