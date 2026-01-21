@@ -84,4 +84,130 @@ describe('Employees API (e2e)', () => {
       .send({ name: 'Second', email })
       .expect(409);
   });
+
+  // HU-11: Actualizar Empleado
+  describe('PATCH /employees/:id (HU-11)', () => {
+    it('debe actualizar nombre exitosamente', async () => {
+      // Crear empleado
+      const createRes = await request(server)
+        .post('/employees')
+        .send({ name: 'Juan Pérez', email: `juan.${Date.now()}@mail.com` })
+        .expect(201);
+
+      const employeeId = createRes.body.id;
+
+      // Actualizar nombre
+      const updateRes = await request(server)
+        .patch(`/employees/${employeeId}`)
+        .send({ name: 'Juan Carlos Pérez' })
+        .expect(200);
+
+      expect(updateRes.body.name).toBe('Juan Carlos Pérez');
+      expect(updateRes.body.email).toBe(createRes.body.email);
+      expect(updateRes.body.id).toBe(employeeId);
+    });
+
+    it('debe actualizar email exitosamente', async () => {
+      const createRes = await request(server)
+        .post('/employees')
+        .send({ name: 'María López', email: `maria.${Date.now()}@mail.com` })
+        .expect(201);
+
+      const employeeId = createRes.body.id;
+      const newEmail = `maria.nueva.${Date.now()}@mail.com`;
+
+      const updateRes = await request(server)
+        .patch(`/employees/${employeeId}`)
+        .send({ email: newEmail })
+        .expect(200);
+
+      expect(updateRes.body.email).toBe(newEmail);
+      expect(updateRes.body.name).toBe('María López');
+    });
+
+    it('debe actualizar nombre y email simultáneamente', async () => {
+      const createRes = await request(server)
+        .post('/employees')
+        .send({ name: 'Pedro García', email: `pedro.${Date.now()}@mail.com` })
+        .expect(201);
+
+      const employeeId = createRes.body.id;
+      const newEmail = `pedro.nuevo.${Date.now()}@mail.com`;
+
+      const updateRes = await request(server)
+        .patch(`/employees/${employeeId}`)
+        .send({ name: 'Pedro José García', email: newEmail })
+        .expect(200);
+
+      expect(updateRes.body.name).toBe('Pedro José García');
+      expect(updateRes.body.email).toBe(newEmail);
+    });
+
+    it('debe rechazar actualización con email duplicado -> 409', async () => {
+      const email1 = `emp1.${Date.now()}@mail.com`;
+      const email2 = `emp2.${Date.now()}@mail.com`;
+
+      // Crear dos empleados
+      await request(server)
+        .post('/employees')
+        .send({ name: 'Empleado 1', email: email1 })
+        .expect(201);
+
+      const emp2Res = await request(server)
+        .post('/employees')
+        .send({ name: 'Empleado 2', email: email2 })
+        .expect(201);
+
+      // Intentar actualizar emp2 con email de emp1
+      await request(server)
+        .patch(`/employees/${emp2Res.body.id}`)
+        .send({ email: email1 })
+        .expect(409);
+    });
+
+    it('debe rechazar actualización con email inválido -> 400', async () => {
+      const createRes = await request(server)
+        .post('/employees')
+        .send({ name: 'Test User', email: `test.${Date.now()}@mail.com` })
+        .expect(201);
+
+      await request(server)
+        .patch(`/employees/${createRes.body.id}`)
+        .send({ email: 'email-invalido' })
+        .expect(400);
+    });
+
+    it('debe rechazar actualización con nombre vacío -> 400', async () => {
+      const createRes = await request(server)
+        .post('/employees')
+        .send({ name: 'Test User', email: `test.${Date.now()}@mail.com` })
+        .expect(201);
+
+      await request(server)
+        .patch(`/employees/${createRes.body.id}`)
+        .send({ name: '' })
+        .expect(400);
+    });
+
+    it('debe rechazar actualización de empleado inexistente -> 404', async () => {
+      await request(server)
+        .patch('/employees/00000000-0000-0000-0000-000000000000')
+        .send({ name: 'Nuevo Nombre' })
+        .expect(404);
+    });
+
+    it('debe permitir actualización idempotente (mismo email)', async () => {
+      const createRes = await request(server)
+        .post('/employees')
+        .send({ name: 'Test User', email: `test.${Date.now()}@mail.com` })
+        .expect(201);
+
+      const updateRes = await request(server)
+        .patch(`/employees/${createRes.body.id}`)
+        .send({ email: createRes.body.email })
+        .expect(200);
+
+      expect(updateRes.body.email).toBe(createRes.body.email);
+    });
+  });
 });

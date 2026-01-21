@@ -338,3 +338,224 @@ npx prisma db seed
 ```
 
   Este script usa upsert para ser idempotente y puede ejecutarse tanto en desarrollo como en CI después de aplicar las migraciones.
+
+
+---
+
+### HU-11 — Actualizar Empleado
+
+```gherkin
+Feature: HU-11 Actualizar Empleado
+  Como usuario de RRHH
+  Quiero actualizar la información de un empleado existente
+  Para mantener los datos actualizados y corregir errores
+
+  Background:
+    Given existe un empleado con id válido en el sistema
+    And el empleado tiene nombre "Juan Pérez" y email "juan.perez@empresa.com"
+
+  Scenario: Actualizar nombre de empleado exitosamente
+    Given el empleado existe en la base de datos
+    When envío una solicitud PATCH a "/employees/{id}" con body:
+      """
+      { "name": "Juan Carlos Pérez" }
+      """
+    Then la respuesta debe tener código 200
+    And el body debe contener "name" con valor "Juan Carlos Pérez"
+    And el body debe contener "email" con valor "juan.perez@empresa.com"
+    And el campo "updatedAt" debe ser actualizado
+
+  Scenario: Actualizar email de empleado exitosamente
+    Given el empleado existe en la base de datos
+    And no existe otro empleado con email "juan.carlos@empresa.com"
+    When envío una solicitud PATCH a "/employees/{id}" con body:
+      """
+      { "email": "juan.carlos@empresa.com" }
+      """
+    Then la respuesta debe tener código 200
+    And el body debe contener "email" con valor "juan.carlos@empresa.com"
+    And el campo "updatedAt" debe ser actualizado
+
+  Scenario: Actualizar nombre y email simultáneamente
+    Given el empleado existe en la base de datos
+    And no existe otro empleado con email "jc.perez@empresa.com"
+    When envío una solicitud PATCH a "/employees/{id}" con body:
+      """
+      { "name": "Juan C. Pérez", "email": "jc.perez@empresa.com" }
+      """
+    Then la respuesta debe tener código 200
+    And el body debe contener "name" con valor "Juan C. Pérez"
+    And el body debe contener "email" con valor "jc.perez@empresa.com"
+    And el campo "updatedAt" debe ser actualizado
+
+  Scenario: Rechazar actualización con email duplicado
+    Given el empleado existe en la base de datos
+    And existe otro empleado con email "maria.lopez@empresa.com"
+    When envío una solicitud PATCH a "/employees/{id}" con body:
+      """
+      { "email": "maria.lopez@empresa.com" }
+      """
+    Then la respuesta debe tener código 409
+    And el mensaje debe contener "Email ya está en uso"
+    And el empleado NO debe ser actualizado en la base de datos
+
+  Scenario: Rechazar actualización con email inválido
+    Given el empleado existe en la base de datos
+    When envío una solicitud PATCH a "/employees/{id}" con body:
+      """
+      { "email": "email-invalido" }
+      """
+    Then la respuesta debe tener código 400
+    And el mensaje debe contener "Email inválido"
+
+  Scenario: Rechazar actualización con nombre vacío
+    Given el empleado existe en la base de datos
+    When envío una solicitud PATCH a "/employees/{id}" con body:
+      """
+      { "name": "" }
+      """
+    Then la respuesta debe tener código 400
+    And el mensaje debe contener "Nombre es requerido"
+
+  Scenario: Rechazar actualización de empleado inexistente
+    Given NO existe un empleado con id "00000000-0000-0000-0000-000000000000"
+    When envío una solicitud PATCH a "/employees/00000000-0000-0000-0000-000000000000" con body:
+      """
+      { "name": "Nuevo Nombre" }
+      """
+    Then la respuesta debe tener código 404
+    And el mensaje debe contener "Empleado no encontrado"
+
+  Scenario: Actualización sin cambios (idempotente)
+    Given el empleado existe en la base de datos
+    When envío una solicitud PATCH a "/employees/{id}" con body:
+      """
+      { "name": "Juan Pérez", "email": "juan.perez@empresa.com" }
+      """
+    Then la respuesta debe tener código 200
+    And el body debe contener los mismos valores
+    And el campo "updatedAt" debe ser actualizado
+```
+
+---
+
+### HU-12 — Actualizar Contrato
+
+```gherkin
+Feature: HU-12 Actualizar Contrato
+  Como usuario de RRHH
+  Quiero actualizar la información de un contrato existente
+  Para ajustar salarios, cambiar estados o corregir errores
+
+  Background:
+    Given existe un empleado con id válido en el sistema
+    And el empleado tiene un contrato activo
+    And el contrato tiene tipo "EMPLOYEE" y salario base 3000000
+
+  Scenario: Actualizar salario base exitosamente
+    Given el contrato existe en la base de datos
+    When envío una solicitud PATCH a "/contracts/{id}" con body:
+      """
+      { "baseSalary": 3500000 }
+      """
+    Then la respuesta debe tener código 200
+    And el body debe contener "baseSalary" con valor 3500000
+    And el campo "updatedAt" debe ser actualizado
+
+  Scenario: Cambiar estado de activo a inactivo
+    Given el contrato existe y está activo
+    When envío una solicitud PATCH a "/contracts/{id}" con body:
+      """
+      { "active": false }
+      """
+    Then la respuesta debe tener código 200
+    And el body debe contener "active" con valor false
+    And el campo "updatedAt" debe ser actualizado
+
+  Scenario: Cambiar estado de inactivo a activo
+    Given el contrato existe y está inactivo
+    When envío una solicitud PATCH a "/contracts/{id}" con body:
+      """
+      { "active": true }
+      """
+    Then la respuesta debe tener código 200
+    And el body debe contener "active" con valor true
+    And el campo "updatedAt" debe ser actualizado
+
+  Scenario: Cambiar tipo de contrato de EMPLOYEE a CONTRACTOR
+    Given el contrato existe con tipo "EMPLOYEE"
+    When envío una solicitud PATCH a "/contracts/{id}" con body:
+      """
+      { "contractType": "CONTRACTOR" }
+      """
+    Then la respuesta debe tener código 200
+    And el body debe contener "contractType" con valor "CONTRACTOR"
+    And el campo "updatedAt" debe ser actualizado
+
+  Scenario: Actualizar múltiples campos simultáneamente
+    Given el contrato existe en la base de datos
+    When envío una solicitud PATCH a "/contracts/{id}" con body:
+      """
+      { "baseSalary": 4000000, "active": true, "contractType": "EMPLOYEE" }
+      """
+    Then la respuesta debe tener código 200
+    And el body debe contener "baseSalary" con valor 4000000
+    And el body debe contener "active" con valor true
+    And el body debe contener "contractType" con valor "EMPLOYEE"
+    And el campo "updatedAt" debe ser actualizado
+
+  Scenario: Rechazar actualización con salario negativo
+    Given el contrato existe en la base de datos
+    When envío una solicitud PATCH a "/contracts/{id}" con body:
+      """
+      { "baseSalary": -1000 }
+      """
+    Then la respuesta debe tener código 400
+    And el mensaje debe contener "Salario debe ser mayor a 0"
+
+  Scenario: Rechazar actualización con salario cero
+    Given el contrato existe en la base de datos
+    When envío una solicitud PATCH a "/contracts/{id}" con body:
+      """
+      { "baseSalary": 0 }
+      """
+    Then la respuesta debe tener código 400
+    And el mensaje debe contener "Salario debe ser mayor a 0"
+
+  Scenario: Rechazar actualización con tipo de contrato inválido
+    Given el contrato existe en la base de datos
+    When envío una solicitud PATCH a "/contracts/{id}" con body:
+      """
+      { "contractType": "FREELANCE" }
+      """
+    Then la respuesta debe tener código 400
+    And el mensaje debe contener "Tipo de contrato inválido"
+
+  Scenario: Rechazar actualización de contrato inexistente
+    Given NO existe un contrato con id "00000000-0000-0000-0000-000000000000"
+    When envío una solicitud PATCH a "/contracts/00000000-0000-0000-0000-000000000000" con body:
+      """
+      { "baseSalary": 3500000 }
+      """
+    Then la respuesta debe tener código 404
+    And el mensaje debe contener "Contrato no encontrado"
+
+  Scenario: Actualización sin cambios (idempotente)
+    Given el contrato existe en la base de datos
+    When envío una solicitud PATCH a "/contracts/{id}" con los mismos valores actuales
+    Then la respuesta debe tener código 200
+    And el body debe contener los mismos valores
+    And el campo "updatedAt" debe ser actualizado
+
+  Scenario: Verificar que contratos de nómina existentes no se afectan
+    Given el contrato tiene nóminas procesadas asociadas
+    When envío una solicitud PATCH a "/contracts/{id}" con body:
+      """
+      { "baseSalary": 3500000 }
+      """
+    Then la respuesta debe tener código 200
+    And las nóminas existentes NO deben ser modificadas
+    And solo el contrato debe ser actualizado
+```
+
+---

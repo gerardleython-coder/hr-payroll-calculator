@@ -204,3 +204,92 @@ Resumen conciso del repositorio para uso por herramientas de IA y nuevos desarro
 - Notas del proyecto:
   - `helmet()` se aplica sin opciones explícitas, por lo que usa la configuración por defecto. Revisar `helmet` docs si necesitas personalizar o relajar alguna cabecera (p.ej. CSP o permitir frames para embed autorizados).
   - En entornos de test (e2e) la cabecera no suele interferir en los tests automáticos con `supertest`, pero si añades políticas CSP estrictas pueden necesitar ajustes (p.ej. permitir inline scripts usados por herramientas de testing).
+
+
+### Reglas de negocio para HU-11: Actualizar Empleado
+
+**RN-11.1: Validación de Existencia**
+- El empleado DEBE existir en la base de datos antes de actualizar.
+- Si el empleado no existe, retornar HTTP 404 con mensaje "Empleado no encontrado".
+
+**RN-11.2: Validación de Email Único**
+- El email DEBE ser único en el sistema.
+- Si el nuevo email ya está en uso por otro empleado, retornar HTTP 409 con mensaje "Email ya está en uso".
+- El empleado puede mantener su propio email (actualización idempotente).
+
+**RN-11.3: Validación de Campos**
+- Si se proporciona `name`, DEBE tener al menos 2 caracteres.
+- Si se proporciona `email`, DEBE ser un email válido (formato estándar).
+- Campos vacíos o null retornan HTTP 400 con mensaje descriptivo.
+
+**RN-11.4: Actualización Parcial (PATCH)**
+- Solo los campos proporcionados en el body se actualizan.
+- Campos no proporcionados mantienen su valor actual.
+- El campo `id` NO puede ser modificado.
+- El campo `createdAt` NO puede ser modificado.
+- El campo `updatedAt` se actualiza automáticamente con la fecha/hora actual.
+
+**RN-11.5: Integridad Referencial**
+- La actualización de un empleado NO afecta sus contratos existentes.
+- La actualización de un empleado NO afecta sus nóminas procesadas.
+- Solo se actualiza el registro en la tabla `Employee`.
+
+**RN-11.6: Idempotencia**
+- Actualizar un empleado con los mismos valores actuales es válido (HTTP 200).
+- El campo `updatedAt` se actualiza incluso si no hay cambios en otros campos.
+
+**RN-11.7: Patrón de Diseño y SOLID**
+- **Patrón:** Repository Pattern para acceso a datos.
+- **Single Responsibility:** `UpdateEmployeeUseCase` solo maneja la lógica de actualización.
+- **Open/Closed:** Se pueden agregar validaciones sin modificar el use case.
+- **Dependency Inversion:** El use case depende de `IEmployeeRepository`, no de implementación concreta.
+
+---
+
+### Reglas de negocio para HU-12: Actualizar Contrato
+
+**RN-12.1: Validación de Existencia**
+- El contrato DEBE existir en la base de datos antes de actualizar.
+- Si el contrato no existe, retornar HTTP 404 con mensaje "Contrato no encontrado".
+
+**RN-12.2: Validación de Salario**
+- Si se proporciona `baseSalary`, DEBE ser mayor a 0.
+- Salarios negativos o cero retornan HTTP 400 con mensaje "Salario debe ser mayor a 0".
+
+**RN-12.3: Validación de Tipo de Contrato**
+- Si se proporciona `contractType`, DEBE ser "EMPLOYEE" o "CONTRACTOR".
+- Otros valores retornan HTTP 400 con mensaje "Tipo de contrato inválido".
+
+**RN-12.4: Validación de Estado Activo**
+- El campo `active` DEBE ser un booleano (true o false).
+- Cambiar de activo a inactivo es válido.
+- Cambiar de inactivo a activo es válido.
+
+**RN-12.5: Actualización Parcial (PATCH)**
+- Solo los campos proporcionados en el body se actualizan.
+- Campos no proporcionados mantienen su valor actual.
+- El campo `id` NO puede ser modificado.
+- El campo `employeeId` NO puede ser modificado (un contrato no puede cambiar de empleado).
+- El campo `createdAt` NO puede ser modificado.
+- El campo `updatedAt` se actualiza automáticamente con la fecha/hora actual.
+
+**RN-12.6: Integridad Referencial**
+- La actualización de un contrato NO afecta las nóminas procesadas existentes.
+- Las nóminas ya calculadas mantienen los valores históricos del contrato al momento del cálculo.
+- Solo se actualiza el registro en la tabla `Contract`.
+
+**RN-12.7: Validación de Nóminas Futuras**
+- Cambiar el estado de un contrato a `active: false` NO invalida nóminas ya procesadas.
+- Intentar calcular una nueva nómina con un contrato inactivo debe fallar (validación existente en HU-09).
+
+**RN-12.8: Idempotencia**
+- Actualizar un contrato con los mismos valores actuales es válido (HTTP 200).
+- El campo `updatedAt` se actualiza incluso si no hay cambios en otros campos.
+
+**RN-12.9: Patrón de Diseño y SOLID**
+- **Patrón:** Repository Pattern para acceso a datos.
+- **Single Responsibility:** `UpdateContractUseCase` solo maneja la lógica de actualización.
+- **Open/Closed:** Se pueden agregar validaciones sin modificar el use case.
+- **Dependency Inversion:** El use case depende de `IContractRepository`, no de implementación concreta.
+
+---
