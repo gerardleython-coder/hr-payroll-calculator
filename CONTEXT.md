@@ -79,9 +79,11 @@ Resumen conciso del repositorio para uso por herramientas de IA y nuevos desarro
 
 **RN-10.1: Validación de Credenciales**
 - El username y password son obligatorios en el payload de login.
-- Las credenciales se validan contra un usuario administrador predeterminado hardcodeado.
-- Usuario predeterminado: `username: "admin"`, `password: "admin123"`.
+- Las credenciales se validan contra usuarios almacenados en la base de datos (tabla `User`).
+- Las contraseñas se almacenan hasheadas con bcrypt (10 rounds).
+- Usuario predeterminado en seed: `username: "admin"`, `password: "admin123"` (hasheado en DB).
 - Si las credenciales son inválidas, retornar HTTP 401 con mensaje genérico "Credenciales inválidas" (no revelar si el usuario existe o no).
+- Si el usuario está inactivo (`active: false`), retornar HTTP 401 con mensaje "Usuario inactivo".
 
 **RN-10.2: Generación de Token JWT**
 - Al login exitoso, generar un token JWT que contenga: `userId`, `username`, `role`.
@@ -121,6 +123,8 @@ Resumen conciso del repositorio para uso por herramientas de IA y nuevos desarro
 - Nunca retornar el password en ninguna respuesta de la API.
 - Los mensajes de error de autenticación deben ser genéricos para evitar enumeración de usuarios.
 - El rate limiting existente (Throttler) se mantiene activo para prevenir ataques de fuerza bruta.
+- Las contraseñas se hashean con bcrypt (10 rounds) antes de almacenar en DB.
+- Los usuarios se almacenan en la tabla `User` con campos: `id`, `username`, `password` (hash), `role`, `active`.
 
 **RN-10.6: Patrón de Diseño y SOLID**
 - **Patrón:** Strategy Pattern para la validación JWT (usando Passport.js).

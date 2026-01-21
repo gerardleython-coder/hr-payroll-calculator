@@ -1,11 +1,13 @@
 require('dotenv').config();
 const { Client } = require('pg');
 const { randomUUID } = require('crypto');
+const bcrypt = require('bcrypt');
 
 async function main() {
   const client = new Client({ connectionString: process.env.DATABASE_URL });
   await client.connect();
 
+  // Seed PayrollRules
   const rules = [
     {
       key: 'EMPLOYEE_HEALTH_PCT',
@@ -54,6 +56,25 @@ async function main() {
   const res = await client.query(`SELECT * FROM "PayrollRule" ORDER BY key`);
   console.log('Payroll rules:');
   console.table(res.rows);
+
+  // Seed Admin User with hashed password
+  const adminUsername = 'admin';
+  const adminPassword = 'admin123';
+  const hashedPassword = await bcrypt.hash(adminPassword, 10);
+  const adminId = 'admin-001';
+
+  await client.query(
+    `INSERT INTO "User" (id, username, password, role, active, "createdAt", "updatedAt")
+     VALUES ($1,$2,$3,$4,$5,now(),now())
+     ON CONFLICT (username) DO UPDATE SET password = EXCLUDED.password, role = EXCLUDED.role, active = EXCLUDED.active, "updatedAt" = now()`,
+    [adminId, adminUsername, hashedPassword, 'ADMIN', true],
+  );
+
+  const userRes = await client.query(`SELECT id, username, role, active FROM "User" WHERE username = $1`, [adminUsername]);
+  console.log('\nAdmin user:');
+  console.table(userRes.rows);
+  console.log(`Password (plain): ${adminPassword}`);
+  console.log(`Password (hash): ${hashedPassword}`);
 
   await client.end();
 }

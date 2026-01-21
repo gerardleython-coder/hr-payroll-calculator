@@ -2,91 +2,136 @@
 import { UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { LoginUseCase } from './login.usecase';
-import { ADMIN_USER } from '../../domain/constants/admin.constants';
+import { PrismaService } from '../../../prisma/prisma.service';
+import * as bcrypt from 'bcrypt';
+
+// Mock bcrypt
+jest.mock('bcrypt');
 
 describe('LoginUseCase', () => {
-  let usecase: LoginUseCase;
+  let useCase: LoginUseCase;
   let jwtService: JwtService;
+  let prismaService: PrismaService;
+
+  const mockJwtService = {
+    sign: jest.fn(),
+  };
+
+  const mockPrismaService = {
+    user: {
+      findUnique: jest.fn(),
+    },
+  };
 
   beforeEach(() => {
-    jwtService = {
-      sign: jest.fn(),
-    } as unknown as JwtService;
+    jwtService = mockJwtService as unknown as JwtService;
+    prismaService = mockPrismaService as unknown as PrismaService;
+    useCase = new LoginUseCase(jwtService, prismaService);
+  });
 
-    usecase = new LoginUseCase(jwtService);
+  afterEach(() => {
+    jest.clearAllMocks();
   });
 
   describe('execute', () => {
-    it('should return access token and user when credentials are valid', () => {
-      const mockToken = 'mock.jwt.token';
-      (jwtService.sign as jest.Mock).mockReturnValue(mockToken);
+    it('should return access token and user when credentials are valid', async () => {
+      const mockUser = {
+        id: 'admin-001',
+        username: 'admin',
+        password: '$2b$10$hashedpassword',
+        role: 'ADMIN',
+        active: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
 
-      const result = usecase.execute({
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+      mockJwtService.sign.mockReturnValue('mock-jwt-token');
+
+      const result = await useCase.execute({
         username: 'admin',
         password: 'admin123',
       });
 
       expect(result).toEqual({
-        accessToken: mockToken,
+        accessToken: 'mock-jwt-token',
         user: {
-          id: ADMIN_USER.id,
-          username: ADMIN_USER.username,
-          role: ADMIN_USER.role,
+          id: 'admin-001',
+          username: 'admin',
+          role: 'ADMIN',
         },
       });
 
+      expect(prismaService.user.findUnique).toHaveBeenCalledWith({
+        where: { username: 'admin' },
+      });
+      expect(bcrypt.compare).toHaveBeenCalledWith(
+        'admin123',
+        '$2b$10$hashedpassword',
+      );
       expect(jwtService.sign).toHaveBeenCalledWith({
-        sub: ADMIN_USER.id,
-        username: ADMIN_USER.username,
-        role: ADMIN_USER.role,
+        sub: 'admin-001',
+        username: 'admin',
+        role: 'ADMIN',
       });
     });
 
-    it('should throw UnauthorizedException when username is incorrect', () => {
-      expect(() =>
-        usecase.execute({
-          username: 'wronguser',
-          password: 'admin123',
-        }),
-      ).toThrow(UnauthorizedException);
+    it('should throw UnauthorizedException when user does not exist', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue(null);
 
-      expect(() =>
-        usecase.execute({
-          username: 'wronguser',
-          password: 'admin123',
-        }),
-      ).toThrow('Credenciales inválidas');
+      await expect(
+        useCase.execute({ username: 'nonexistent', password: 'password' }),
+      ).rejects.toThrow(UnauthorizedException);
 
-      expect(jwtService.sign).not.toHaveBeenCalled();
+      await expect(
+        useCase.execute({ username: 'nonexistent', password: 'password' }),
+      ).rejects.toThrow('Credenciales inválidas');
     });
 
-    it('should throw UnauthorizedException when password is incorrect', () => {
-      expect(() =>
-        usecase.execute({
-          username: 'admin',
-          password: 'wrongpassword',
-        }),
-      ).toThrow(UnauthorizedException);
+    it('should throw UnauthorizedException when password is incorrect', async () => {
+      const mockUser = {
+        id: 'admin-001',
+        username: 'admin',
+        password: '$2b$10$hashedpassword',
+        role: 'ADMIN',
+        active: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
 
-      expect(() =>
-        usecase.execute({
-          username: 'admin',
-          password: 'wrongpassword',
-        }),
-      ).toThrow('Credenciales inválidas');
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+      (bcrypt.compare as jest.Mock).mockResolvedValue(false);
 
-      expect(jwtService.sign).not.toHaveBeenCalled();
+      await expect(
+        useCase.execute({ username: 'admin', password: 'wrongpassword' }),
+      ).rejects.toThrow(UnauthorizedException);
+
+      await expect(
+        useCase.execute({ username: 'admin', password: 'wrongpassword' }),
+      ).rejects.toThrow('Credenciales inválidas');
     });
 
-    it('should throw UnauthorizedException when both username and password are incorrect', () => {
-      expect(() =>
-        usecase.execute({
-          username: 'wronguser',
-          password: 'wrongpassword',
-        }),
-      ).toThrow(UnauthorizedException);
+    it('should throw UnauthorizedException when user is inactive', async () => {
+      const mockUser = {
+        id: 'admin-001',
+        username: 'admin',
+        password: '$2b$10$hashedpassword',
+        role: 'ADMIN',
+        active: false, // Inactive user
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
 
-      expect(jwtService.sign).not.toHaveBeenCalled();
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+
+      await expect(
+        useCase.execute({ username: 'admin', password: 'admin123' }),
+      ).rejects.toThrow(UnauthorizedException);
+
+      await expect(
+        useCase.execute({ username: 'admin', password: 'admin123' }),
+      ).rejects.toThrow('Usuario inactivo');
     });
   });
 });
