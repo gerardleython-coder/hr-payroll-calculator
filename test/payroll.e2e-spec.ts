@@ -291,4 +291,104 @@ describe('Payroll API (e2e)', () => {
       expect(typeof body.net).toBe('number');
     });
   });
+
+  // HU-13: Download Payroll PDF Tests
+  describe('GET /payroll/runs/:id/pdf (HU-13)', () => {
+    it('should download PDF for existing payroll run', async () => {
+      // Create employee, contract, and payroll run
+      const emp = await request(server)
+        .post('/employees')
+        .send({
+          name: 'Juan Pérez',
+          email: `juan.${Date.now()}@mail.com`,
+        })
+        .expect(201);
+
+      const contract = await request(server)
+        .post('/contracts')
+        .send({
+          employeeId: emp.body.id,
+          contractType: 'EMPLOYEE',
+          baseSalary: 3_000_000,
+        })
+        .expect(201);
+
+      const payrollRun = await request(server)
+        .post('/payroll/runs')
+        .send({
+          employeeId: emp.body.id,
+          contractId: contract.body.id,
+          period: '2026-01',
+          bonuses: 0,
+        })
+        .expect(201);
+
+      // Download PDF
+      const res = await request(server)
+        .get(`/payroll/runs/${payrollRun.body.id}/pdf`)
+        .expect(200);
+
+      // Verify headers
+      expect(res.headers['content-type']).toBe('application/pdf');
+      expect(res.headers['content-disposition']).toContain('attachment');
+      expect(res.headers['content-disposition']).toContain('filename=');
+      expect(res.headers['content-disposition']).toContain('.pdf');
+
+      // Verify PDF content
+      expect(res.body).toBeInstanceOf(Buffer);
+      expect(res.body.length).toBeGreaterThan(0);
+
+      // Verify it's a valid PDF (starts with %PDF)
+      const pdfHeader = res.body.toString('utf8', 0, 4);
+      expect(pdfHeader).toBe('%PDF');
+    });
+
+    it('should return 404 for non-existent payroll run', async () => {
+      await request(server)
+        .get('/payroll/runs/00000000-0000-0000-0000-000000000000/pdf')
+        .expect(404);
+    });
+
+    it('should generate PDF with correct filename format', async () => {
+      const emp = await request(server)
+        .post('/employees')
+        .send({
+          name: 'María López García',
+          email: `maria.${Date.now()}@mail.com`,
+        })
+        .expect(201);
+
+      const contract = await request(server)
+        .post('/contracts')
+        .send({
+          employeeId: emp.body.id,
+          contractType: 'CONTRACTOR',
+          baseSalary: 2_000_000,
+        })
+        .expect(201);
+
+      const payrollRun = await request(server)
+        .post('/payroll/runs')
+        .send({
+          employeeId: emp.body.id,
+          contractId: contract.body.id,
+          period: '2026-02',
+          bonuses: 0,
+        })
+        .expect(201);
+
+      const res = await request(server)
+        .get(`/payroll/runs/${payrollRun.body.id}/pdf`)
+        .expect(200);
+
+      const contentDisposition = res.headers['content-disposition'] as string;
+      expect(contentDisposition).toMatch(/nomina-\d{4}-\d{2}-.+\.pdf/);
+      
+      // Extract filename from header (format: attachment; filename="nomina-2026-02-maria-lopez-garcia.pdf")
+      const filenameMatch = contentDisposition.match(/filename="([^"]+)"/);
+      expect(filenameMatch).toBeTruthy();
+      const filename = filenameMatch![1];
+      expect(filename).not.toContain(' '); // No spaces in filename
+    });
+  });
 });

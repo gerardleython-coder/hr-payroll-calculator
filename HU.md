@@ -559,3 +559,80 @@ Feature: HU-12 Actualizar Contrato
 ```
 
 ---
+
+
+---
+
+### HU-13 — Descargar PDF de Nómina
+
+```gherkin
+Feature: HU-13 Descargar PDF de Nómina
+  Como usuario de RRHH
+  Quiero descargar un reporte en PDF de una nómina procesada
+  Para tener un documento imprimible y archivable del cálculo
+
+  Background:
+    Given existe un empleado con id válido en el sistema
+    And el empleado tiene un contrato activo
+    And existe una nómina procesada para ese empleado
+
+  Scenario: Descargar PDF de nómina exitosamente
+    Given existe una nómina con id válido
+    When envío una solicitud GET a "/payroll/runs/{id}/pdf"
+    Then la respuesta debe tener código 200
+    And el header "Content-Type" debe ser "application/pdf"
+    And el header "Content-Disposition" debe contener "attachment; filename="
+    And el body debe ser un archivo PDF válido
+    And el PDF debe contener el nombre del empleado
+    And el PDF debe contener el período de la nómina
+    And el PDF debe contener el salario bruto (gross)
+    And el PDF debe contener el salario neto (net)
+    And el PDF debe contener el desglose completo (breakdown)
+
+  Scenario: Rechazar descarga de nómina inexistente
+    Given NO existe una nómina con id "00000000-0000-0000-0000-000000000000"
+    When envío una solicitud GET a "/payroll/runs/00000000-0000-0000-0000-000000000000/pdf"
+    Then la respuesta debe tener código 404
+    And el mensaje debe contener "Nómina no encontrada"
+
+  Scenario: PDF debe incluir información del empleado
+    Given existe una nómina procesada
+    When descargo el PDF de la nómina
+    Then el PDF debe mostrar:
+      | Campo           | Descripción                    |
+      | Nombre          | Nombre completo del empleado   |
+      | Email           | Email del empleado             |
+      | Tipo Contrato   | EMPLOYEE o CONTRACTOR          |
+      | Período         | Formato YYYY-MM                |
+
+  Scenario: PDF debe incluir desglose detallado
+    Given existe una nómina procesada para un EMPLOYEE
+    When descargo el PDF de la nómina
+    Then el PDF debe mostrar el desglose con:
+      | Concepto              | Valor                    |
+      | Salario Bruto         | gross                    |
+      | Salud (4%)            | breakdown.health         |
+      | Pensión (4%)          | breakdown.pension        |
+      | Retención             | breakdown.withholding    |
+      | Otras Deducciones     | breakdown.otherDeductions|
+      | Salario Neto          | net                      |
+
+  Scenario: PDF debe tener formato profesional
+    Given existe una nómina procesada
+    When descargo el PDF de la nómina
+    Then el PDF debe tener:
+      | Elemento          | Descripción                           |
+      | Logo/Encabezado   | Título "Comprobante de Nómina"        |
+      | Fecha generación  | Fecha actual de generación del PDF    |
+      | Formato moneda    | Valores con separador de miles        |
+      | Tabla desglose    | Tabla con bordes y formato claro      |
+      | Pie de página     | Información adicional o disclaimer    |
+
+  Scenario: Validar que el PDF sea descargable desde el navegador
+    Given existe una nómina procesada
+    When el frontend solicita el PDF
+    Then el navegador debe iniciar la descarga automáticamente
+    And el archivo debe tener nombre descriptivo como "nomina-{period}-{employeeName}.pdf"
+```
+
+---

@@ -293,3 +293,62 @@ Resumen conciso del repositorio para uso por herramientas de IA y nuevos desarro
 - **Dependency Inversion:** El use case depende de `IContractRepository`, no de implementación concreta.
 
 ---
+
+
+---
+
+### Reglas de negocio para HU-13: Descargar PDF de Nómina
+
+**RN-13.1: Validación de Existencia**
+- La nómina DEBE existir en la base de datos antes de generar el PDF.
+- Si la nómina no existe, retornar HTTP 404 con mensaje "Nómina no encontrada".
+
+**RN-13.2: Contenido Obligatorio del PDF**
+- El PDF DEBE incluir:
+  - Título: "Comprobante de Nómina"
+  - Información del empleado: nombre, email
+  - Información del contrato: tipo de contrato
+  - Período de la nómina (formato YYYY-MM)
+  - Fecha de generación del PDF
+  - Salario bruto (gross)
+  - Desglose completo (breakdown): salud, pensión, retención, otras deducciones
+  - Salario neto (net)
+
+**RN-13.3: Formato de Moneda**
+- Todos los valores monetarios DEBEN mostrarse con separador de miles.
+- Formato: $1,000,000 (peso colombiano)
+- Sin decimales (valores redondeados)
+
+**RN-13.4: Formato del PDF**
+- El PDF DEBE ser profesional y legible.
+- DEBE incluir una tabla con bordes para el desglose.
+- DEBE usar fuentes legibles (tamaño mínimo 10pt).
+- DEBE tener márgenes apropiados (mínimo 20mm).
+
+**RN-13.5: Headers HTTP**
+- Content-Type: "application/pdf"
+- Content-Disposition: "attachment; filename=nomina-{period}-{employeeName}.pdf"
+- El nombre del archivo DEBE ser descriptivo y sin espacios (usar guiones).
+
+**RN-13.6: Desglose según Tipo de Contrato**
+- Para EMPLOYEE: mostrar salud, pensión, retención, otras deducciones
+- Para CONTRACTOR: mostrar retención, otras deducciones
+- Los conceptos que no aplican NO deben mostrarse en el PDF.
+
+**RN-13.7: Seguridad y Privacidad**
+- El endpoint DEBE estar protegido por autenticación JWT (como todos los endpoints).
+- Solo usuarios autenticados pueden descargar PDFs.
+- No se requiere validación de propiedad (cualquier admin puede descargar cualquier nómina).
+
+**RN-13.8: Performance**
+- La generación del PDF DEBE ser síncrona (no usar colas).
+- El PDF se genera en memoria y se envía directamente al cliente.
+- No se almacenan PDFs en disco (generación on-demand).
+
+**RN-13.9: Patrón de Diseño y SOLID**
+- **Patrón:** Strategy Pattern para diferentes formatos de reporte (PDF, Excel en el futuro).
+- **Single Responsibility:** Un servicio dedicado solo a generar PDFs.
+- **Open/Closed:** Se pueden agregar nuevos formatos sin modificar el existente.
+- **Dependency Inversion:** El use case depende de una abstracción IPdfGenerator, no de implementación concreta.
+
+---
