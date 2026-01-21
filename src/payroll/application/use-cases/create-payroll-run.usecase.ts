@@ -49,6 +49,10 @@ export class CreatePayrollRunUseCase {
 
     // At this point, contract is guaranteed to exist, be active, and belong to employee
     // (validators would have thrown otherwise)
+    // TypeScript null check: this should never happen due to validators
+    if (!contract) {
+      throw new NotFoundException('Contract not found');
+    }
 
     // 4) Calcular
     const result = this.calculator.calculate({

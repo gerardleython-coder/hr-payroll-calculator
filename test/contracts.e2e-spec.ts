@@ -94,4 +94,252 @@ describe('Contracts API (e2e)', () => {
     expect(first?.active).toBe(false);
     expect(second?.active).toBe(true);
   });
+
+  // HU-12: Update Contract Tests
+  describe('PATCH /contracts/:id (HU-12)', () => {
+    it('should update baseSalary successfully', async () => {
+      // Create employee and contract
+      const emp = await request(server)
+        .post('/employees')
+        .send({ name: 'Test Emp', email: `test.${Date.now()}@mail.com` })
+        .expect(201);
+
+      const contract = await request(server)
+        .post('/contracts')
+        .send({
+          employeeId: emp.body.id,
+          contractType: 'EMPLOYEE',
+          baseSalary: 3_000_000,
+        })
+        .expect(201);
+
+      // Update baseSalary
+      const res = await request(server)
+        .patch(`/contracts/${contract.body.id}`)
+        .send({ baseSalary: 3_500_000 })
+        .expect(200);
+
+      expect(res.body.baseSalary).toBe(3_500_000);
+      expect(res.body.contractType).toBe('EMPLOYEE');
+      expect(res.body.active).toBe(true);
+    });
+
+    it('should update active status from true to false', async () => {
+      const emp = await request(server)
+        .post('/employees')
+        .send({ name: 'Test Emp', email: `test.${Date.now()}@mail.com` })
+        .expect(201);
+
+      const contract = await request(server)
+        .post('/contracts')
+        .send({
+          employeeId: emp.body.id,
+          contractType: 'EMPLOYEE',
+          baseSalary: 3_000_000,
+        })
+        .expect(201);
+
+      const res = await request(server)
+        .patch(`/contracts/${contract.body.id}`)
+        .send({ active: false })
+        .expect(200);
+
+      expect(res.body.active).toBe(false);
+    });
+
+    it('should update contractType from EMPLOYEE to CONTRACTOR', async () => {
+      const emp = await request(server)
+        .post('/employees')
+        .send({ name: 'Test Emp', email: `test.${Date.now()}@mail.com` })
+        .expect(201);
+
+      const contract = await request(server)
+        .post('/contracts')
+        .send({
+          employeeId: emp.body.id,
+          contractType: 'EMPLOYEE',
+          baseSalary: 3_000_000,
+        })
+        .expect(201);
+
+      const res = await request(server)
+        .patch(`/contracts/${contract.body.id}`)
+        .send({ contractType: 'CONTRACTOR' })
+        .expect(200);
+
+      expect(res.body.contractType).toBe('CONTRACTOR');
+    });
+
+    it('should update multiple fields simultaneously', async () => {
+      const emp = await request(server)
+        .post('/employees')
+        .send({ name: 'Test Emp', email: `test.${Date.now()}@mail.com` })
+        .expect(201);
+
+      const contract = await request(server)
+        .post('/contracts')
+        .send({
+          employeeId: emp.body.id,
+          contractType: 'EMPLOYEE',
+          baseSalary: 3_000_000,
+        })
+        .expect(201);
+
+      const res = await request(server)
+        .patch(`/contracts/${contract.body.id}`)
+        .send({
+          baseSalary: 4_000_000,
+          active: true,
+          contractType: 'CONTRACTOR',
+        })
+        .expect(200);
+
+      expect(res.body.baseSalary).toBe(4_000_000);
+      expect(res.body.active).toBe(true);
+      expect(res.body.contractType).toBe('CONTRACTOR');
+    });
+
+    it('should return 404 when contract does not exist', async () => {
+      await request(server)
+        .patch('/contracts/00000000-0000-0000-0000-000000000000')
+        .send({ baseSalary: 3_500_000 })
+        .expect(404);
+    });
+
+    it('should return 400 when baseSalary is negative', async () => {
+      const emp = await request(server)
+        .post('/employees')
+        .send({ name: 'Test Emp', email: `test.${Date.now()}@mail.com` })
+        .expect(201);
+
+      const contract = await request(server)
+        .post('/contracts')
+        .send({
+          employeeId: emp.body.id,
+          contractType: 'EMPLOYEE',
+          baseSalary: 3_000_000,
+        })
+        .expect(201);
+
+      await request(server)
+        .patch(`/contracts/${contract.body.id}`)
+        .send({ baseSalary: -1000 })
+        .expect(400);
+    });
+
+    it('should return 400 when baseSalary is zero', async () => {
+      const emp = await request(server)
+        .post('/employees')
+        .send({ name: 'Test Emp', email: `test.${Date.now()}@mail.com` })
+        .expect(201);
+
+      const contract = await request(server)
+        .post('/contracts')
+        .send({
+          employeeId: emp.body.id,
+          contractType: 'EMPLOYEE',
+          baseSalary: 3_000_000,
+        })
+        .expect(201);
+
+      await request(server)
+        .patch(`/contracts/${contract.body.id}`)
+        .send({ baseSalary: 0 })
+        .expect(400);
+    });
+
+    it('should return 400 when contractType is invalid', async () => {
+      const emp = await request(server)
+        .post('/employees')
+        .send({ name: 'Test Emp', email: `test.${Date.now()}@mail.com` })
+        .expect(201);
+
+      const contract = await request(server)
+        .post('/contracts')
+        .send({
+          employeeId: emp.body.id,
+          contractType: 'EMPLOYEE',
+          baseSalary: 3_000_000,
+        })
+        .expect(201);
+
+      await request(server)
+        .patch(`/contracts/${contract.body.id}`)
+        .send({ contractType: 'FREELANCE' })
+        .expect(400);
+    });
+
+    it('should allow idempotent update with same values', async () => {
+      const emp = await request(server)
+        .post('/employees')
+        .send({ name: 'Test Emp', email: `test.${Date.now()}@mail.com` })
+        .expect(201);
+
+      const contract = await request(server)
+        .post('/contracts')
+        .send({
+          employeeId: emp.body.id,
+          contractType: 'EMPLOYEE',
+          baseSalary: 3_000_000,
+        })
+        .expect(201);
+
+      const res = await request(server)
+        .patch(`/contracts/${contract.body.id}`)
+        .send({
+          baseSalary: 3_000_000,
+          active: true,
+          contractType: 'EMPLOYEE',
+        })
+        .expect(200);
+
+      expect(res.body.baseSalary).toBe(3_000_000);
+      expect(res.body.active).toBe(true);
+      expect(res.body.contractType).toBe('EMPLOYEE');
+    });
+
+    it('should not affect existing payroll runs when updating contract', async () => {
+      // Create employee and contract
+      const emp = await request(server)
+        .post('/employees')
+        .send({ name: 'Test Emp', email: `test.${Date.now()}@mail.com` })
+        .expect(201);
+
+      const contract = await request(server)
+        .post('/contracts')
+        .send({
+          employeeId: emp.body.id,
+          contractType: 'EMPLOYEE',
+          baseSalary: 3_000_000,
+        })
+        .expect(201);
+
+      // Create payroll run
+      const payrollRun = await request(server)
+        .post('/payroll/runs')
+        .send({
+          employeeId: emp.body.id,
+          contractId: contract.body.id,
+          period: '2026-01',
+          bonuses: 0,
+          otherDeductions: 0,
+        })
+        .expect(201);
+
+      const originalGross = payrollRun.body.gross;
+
+      // Update contract baseSalary
+      await request(server)
+        .patch(`/contracts/${contract.body.id}`)
+        .send({ baseSalary: 4_000_000 })
+        .expect(200);
+
+      // Verify payroll run was not affected
+      const payrollRuns = await prisma.payrollRun.findMany({
+        where: { id: payrollRun.body.id },
+      });
+
+      expect(payrollRuns[0].gross).toBe(originalGross);
+    });
+  });
 });
