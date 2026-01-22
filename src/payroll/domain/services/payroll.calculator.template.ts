@@ -67,11 +67,7 @@ export abstract class PayrollCalculatorTemplate {
       input,
     );
 
-    // Ejemplo: deducción obligatoria adicional ficticia para empleados
-    const mandatoryDeductions =
-      input.contractType === 'EMPLOYEE' ? this.round2(gross * 0.01) : 0;
-
-    return { taxes: this.round2(taxes), taxDetail, mandatoryDeductions };
+    return { taxes: this.round2(taxes), taxDetail, mandatoryDeductions: 0 };
   }
 
   protected normalizeMoney(n: number) {

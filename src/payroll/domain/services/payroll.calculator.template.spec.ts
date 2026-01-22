@@ -18,7 +18,7 @@ describe('PayrollCalculatorTemplate', () => {
     });
 
     expect(res.gross).toBe(3_500_000);
-    expect(res.mandatoryDeductions).toBe(35_000); // 1% ficticio
+    expect(res.mandatoryDeductions).toBe(0); // Eliminada deducción ficticia
     expect(res.breakdown.health).toBeDefined();
     expect(res.breakdown.pension).toBeDefined();
     expect(res.breakdown.withholding).toBeGreaterThanOrEqual(0);

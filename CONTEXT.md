@@ -87,7 +87,7 @@ Resumen conciso del repositorio para uso por herramientas de IA y nuevos desarro
 
 **RN-10.2: Generación de Token JWT**
 - Al login exitoso, generar un token JWT que contenga: `userId`, `username`, `role`.
-- El token debe tener un tiempo de expiración de 8 horas (`8h`).
+- El token debe tener un tiempo de expiración de 24 horas (`24h`).
 - La clave secreta debe obtenerse de la variable de entorno `JWT_SECRET`.
 - El token se retorna en el campo `accessToken` junto con información básica del usuario.
 

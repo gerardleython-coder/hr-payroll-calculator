@@ -127,7 +127,7 @@ describe('CreatePayrollRunUseCase', () => {
       gross: 1000.4,
       net: 800.6,
       taxes: 100,
-      mandatoryDeductions: 50,
+      mandatoryDeductions: 0, // Eliminada deducción ficticia
       otherDeductions: 49.8,
       breakdown: { health: 40, pension: 40, withholding: 20 },
     } as CalcResult);
@@ -175,7 +175,7 @@ describe('CreatePayrollRunUseCase', () => {
           pension: 40,
           withholding: 20,
           taxes: 100,
-          mandatoryDeductions: 50,
+          mandatoryDeductions: 0, // Eliminada deducción ficticia
           otherDeductions: 49.8,
         }),
       }),
