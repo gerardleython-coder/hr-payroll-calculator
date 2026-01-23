@@ -339,7 +339,7 @@ describe('Payroll API (e2e)', () => {
       expect(res.body.length).toBeGreaterThan(0);
 
       // Verify it's a valid PDF (starts with %PDF)
-      const pdfHeader = res.body.toString('utf8', 0, 4);
+      const pdfHeader = (res.body as Buffer).toString('utf8', 0, 4);
       expect(pdfHeader).toBe('%PDF');
     });
 
@@ -381,9 +381,9 @@ describe('Payroll API (e2e)', () => {
         .get(`/payroll/runs/${payrollRun.body.id}/pdf`)
         .expect(200);
 
-      const contentDisposition = res.headers['content-disposition'] as string;
+      const contentDisposition = res.headers['content-disposition'];
       expect(contentDisposition).toMatch(/nomina-\d{4}-\d{2}-.+\.pdf/);
-      
+
       // Extract filename from header (format: attachment; filename="nomina-2026-02-maria-lopez-garcia.pdf")
       const filenameMatch = contentDisposition.match(/filename="([^"]+)"/);
       expect(filenameMatch).toBeTruthy();

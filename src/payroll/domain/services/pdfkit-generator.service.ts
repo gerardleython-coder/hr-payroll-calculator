@@ -38,7 +38,7 @@ export class PdfKitGeneratorService implements IPdfGenerator {
 
         doc.end();
       } catch (error) {
-        reject(error);
+        reject(error instanceof Error ? error : new Error(String(error)));
       }
     });
   }
@@ -117,39 +117,84 @@ export class PdfKitGeneratorService implements IPdfGenerator {
       .lineTo(550, currentY - 5)
       .stroke();
 
+    // Salario Base
+    if (breakdown.baseSalary) {
+      doc
+        .font('Helvetica')
+        .text('Salario Base', col1X, currentY)
+        .text(
+          this.formatCurrency(Number(breakdown.baseSalary)),
+          col2X,
+          currentY,
+        );
+      currentY += rowHeight;
+    }
+
+    // Bonos
+    if (breakdown.bonuses && breakdown.bonuses > 0) {
+      doc
+        .text('Bonos', col1X, currentY)
+        .text(this.formatCurrency(Number(breakdown.bonuses)), col2X, currentY);
+      currentY += rowHeight;
+    }
+
+    // Línea antes del bruto
+    if (breakdown.baseSalary || breakdown.bonuses) {
+      doc
+        .moveTo(col1X, currentY - 5)
+        .lineTo(550, currentY - 5)
+        .stroke();
+    }
+
     // Salario Bruto
     doc
-      .font('Helvetica')
+      .font('Helvetica-Bold')
       .text('Salario Bruto', col1X, currentY)
       .text(this.formatCurrency(payrollRun.gross), col2X, currentY);
     currentY += rowHeight;
 
+    // Línea después del bruto
+    doc
+      .moveTo(col1X, currentY - 5)
+      .lineTo(550, currentY - 5)
+      .stroke();
+
     // Deducciones
+    doc.font('Helvetica');
+
     if (breakdown.health) {
       doc
         .text('Salud (4%)', col1X, currentY)
-        .text(this.formatCurrency(breakdown.health), col2X, currentY);
+        .text(this.formatCurrency(Number(breakdown.health)), col2X, currentY);
       currentY += rowHeight;
     }
 
     if (breakdown.pension) {
       doc
         .text('Pensión (4%)', col1X, currentY)
-        .text(this.formatCurrency(breakdown.pension), col2X, currentY);
+        .text(this.formatCurrency(Number(breakdown.pension)), col2X, currentY);
       currentY += rowHeight;
     }
 
     if (breakdown.withholding) {
       doc
         .text('Retención', col1X, currentY)
-        .text(this.formatCurrency(breakdown.withholding), col2X, currentY);
+        .text(
+          this.formatCurrency(Number(breakdown.withholding)),
+          col2X,
+          currentY,
+        );
       currentY += rowHeight;
     }
 
     if (breakdown.otherDeductions && breakdown.otherDeductions > 0) {
       doc
         .text('Otras Deducciones', col1X, currentY)
-        .text(this.formatCurrency(breakdown.otherDeductions), col2X, currentY);
+        .text(
+          this.formatCurrency(Number(breakdown.otherDeductions)),
+          col2X,
+          currentY,
+        );
       currentY += rowHeight;
     }
 

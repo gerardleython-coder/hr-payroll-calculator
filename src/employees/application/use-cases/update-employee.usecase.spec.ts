@@ -1,8 +1,9 @@
+/* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/unbound-method */
 import { Test, TestingModule } from '@nestjs/testing';
 import { UpdateEmployeeUseCase } from './update-employee.usecase';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { Employee } from '@prisma/client';
-import { NotFoundException, ConflictException } from '@nestjs/common';
+import { NotFoundException } from '@nestjs/common';
 
 describe('UpdateEmployeeUseCase (HU-11)', () => {
   let useCase: UpdateEmployeeUseCase;
@@ -75,7 +76,7 @@ describe('UpdateEmployeeUseCase (HU-11)', () => {
       prisma.employee.findUnique
         .mockResolvedValueOnce(mockEmployee) // findById
         .mockResolvedValueOnce(mockEmployee); // findByEmail (mismo empleado)
-      
+
       prisma.employee.update.mockResolvedValue({
         ...mockEmployee,
         updatedAt: new Date(),
@@ -115,7 +116,7 @@ describe('UpdateEmployeeUseCase (HU-11)', () => {
       prisma.employee.findUnique
         .mockResolvedValueOnce(mockEmployee) // findById
         .mockResolvedValueOnce(null); // findByEmail (disponible)
-      
+
       prisma.employee.update.mockResolvedValue({
         ...mockEmployee,
         email: 'juan.carlos@empresa.com',
@@ -138,7 +139,7 @@ describe('UpdateEmployeeUseCase (HU-11)', () => {
       prisma.employee.findUnique
         .mockResolvedValueOnce(mockEmployee) // findById
         .mockResolvedValueOnce(null); // findByEmail
-      
+
       prisma.employee.update.mockResolvedValue({
         ...mockEmployee,
         name: 'Juan C. Pérez',
@@ -167,7 +168,7 @@ describe('UpdateEmployeeUseCase (HU-11)', () => {
       prisma.employee.findUnique
         .mockResolvedValueOnce(mockEmployee) // findById
         .mockResolvedValueOnce(mockEmployee); // findByEmail (mismo)
-      
+
       prisma.employee.update.mockResolvedValue({
         ...mockEmployee,
         updatedAt: now,

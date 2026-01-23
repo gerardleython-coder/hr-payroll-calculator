@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/unbound-method */
 import { NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from '../../../prisma/prisma.service';
@@ -6,8 +7,6 @@ import type { IPdfGenerator } from '../../domain/services/pdf-generator.interfac
 
 describe('DownloadPayrollPdfUseCase', () => {
   let useCase: DownloadPayrollPdfUseCase;
-  let prisma: PrismaService;
-  let pdfGenerator: IPdfGenerator;
 
   const mockPrismaService = {
     payrollRun: {

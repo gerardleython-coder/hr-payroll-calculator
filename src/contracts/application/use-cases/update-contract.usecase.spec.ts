@@ -1,4 +1,4 @@
-import { NotFoundException, ConflictException } from '@nestjs/common';
+import { NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { UpdateContractUseCase } from './update-contract.usecase';
@@ -7,7 +7,6 @@ import { ContractType } from '@prisma/client';
 
 describe('UpdateContractUseCase', () => {
   let useCase: UpdateContractUseCase;
-  let prisma: PrismaService;
 
   const mockPrismaService = {
     contract: {
@@ -63,9 +62,7 @@ describe('UpdateContractUseCase', () => {
       };
       const updatedContract = { ...existingContract, baseSalary: 3500000 };
 
-      mockPrismaService.contract.findUnique.mockResolvedValue(
-        existingContract,
-      );
+      mockPrismaService.contract.findUnique.mockResolvedValue(existingContract);
       mockPrismaService.contract.update.mockResolvedValue(updatedContract);
 
       const result = await useCase.execute(contractId, dto);
@@ -91,9 +88,7 @@ describe('UpdateContractUseCase', () => {
       };
       const updatedContract = { ...existingContract, active: false };
 
-      mockPrismaService.contract.findUnique.mockResolvedValue(
-        existingContract,
-      );
+      mockPrismaService.contract.findUnique.mockResolvedValue(existingContract);
       mockPrismaService.contract.update.mockResolvedValue(updatedContract);
 
       const result = await useCase.execute(contractId, dto);
@@ -122,9 +117,7 @@ describe('UpdateContractUseCase', () => {
         contractType: ContractType.CONTRACTOR,
       };
 
-      mockPrismaService.contract.findUnique.mockResolvedValue(
-        existingContract,
-      );
+      mockPrismaService.contract.findUnique.mockResolvedValue(existingContract);
       mockPrismaService.contract.update.mockResolvedValue(updatedContract);
 
       const result = await useCase.execute(contractId, dto);
@@ -159,9 +152,7 @@ describe('UpdateContractUseCase', () => {
         contractType: ContractType.EMPLOYEE,
       };
 
-      mockPrismaService.contract.findUnique.mockResolvedValue(
-        existingContract,
-      );
+      mockPrismaService.contract.findUnique.mockResolvedValue(existingContract);
       mockPrismaService.contract.update.mockResolvedValue(updatedContract);
 
       const result = await useCase.execute(contractId, dto);
@@ -202,9 +193,7 @@ describe('UpdateContractUseCase', () => {
         updatedAt: new Date('2024-01-02'),
       };
 
-      mockPrismaService.contract.findUnique.mockResolvedValue(
-        existingContract,
-      );
+      mockPrismaService.contract.findUnique.mockResolvedValue(existingContract);
       mockPrismaService.contract.update.mockResolvedValue(updatedContract);
 
       const result = await useCase.execute(contractId, dto);
@@ -231,9 +220,7 @@ describe('UpdateContractUseCase', () => {
       };
       const updatedContract = { ...existingContract, active: false };
 
-      mockPrismaService.contract.findUnique.mockResolvedValue(
-        existingContract,
-      );
+      mockPrismaService.contract.findUnique.mockResolvedValue(existingContract);
       mockPrismaService.contract.update.mockResolvedValue(updatedContract);
 
       const result = await useCase.execute(contractId, dto);
@@ -255,9 +242,7 @@ describe('UpdateContractUseCase', () => {
       };
       const updatedContract = { ...existingContract, active: true };
 
-      mockPrismaService.contract.findUnique.mockResolvedValue(
-        existingContract,
-      );
+      mockPrismaService.contract.findUnique.mockResolvedValue(existingContract);
       mockPrismaService.contract.update.mockResolvedValue(updatedContract);
 
       const result = await useCase.execute(contractId, dto);

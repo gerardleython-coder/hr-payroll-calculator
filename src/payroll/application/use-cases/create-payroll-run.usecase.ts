@@ -70,6 +70,8 @@ export class CreatePayrollRunUseCase {
       gross: Math.round(result.gross),
       net: Math.round(result.net),
       breakdown: {
+        baseSalary: contract.baseSalary,
+        bonuses: dto.bonuses || 0,
         ...result.breakdown,
         taxes: result.taxes,
         mandatoryDeductions: result.mandatoryDeductions,
