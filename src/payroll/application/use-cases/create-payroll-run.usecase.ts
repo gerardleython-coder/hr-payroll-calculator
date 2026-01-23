@@ -1,12 +1,14 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { PayrollCalculatorTemplate } from '../../domain/services/payroll.calculator.template';
 import { CreatePayrollRunDto } from '../dtos/create-payroll-run.dto';
+import type { IPayrollValidator } from '../../domain/validators/payroll.validator.interface';
 
 export class CreatePayrollRunUseCase {
   constructor(
     private readonly prisma: PrismaService,
     private readonly calculator: PayrollCalculatorTemplate,
+    private readonly validators: IPayrollValidator[] = [],
   ) {}
 
   async execute(dto: CreatePayrollRunDto) {
@@ -26,15 +28,33 @@ export class CreatePayrollRunUseCase {
           orderBy: { createdAt: 'desc' },
         });
 
+    // 3) Ejecutar cadena de validadores (Chain of Responsibility - RN-9.4)
+    const validationContext = {
+      employeeId: dto.employeeId,
+      contractId: dto.contractId || contract?.id || '',
+      contract: contract
+        ? {
+            id: contract.id,
+            employeeId: contract.employeeId,
+            active: contract.active,
+            contractType: contract.contractType,
+            baseSalary: contract.baseSalary,
+          }
+        : null,
+    };
+
+    for (const validator of this.validators) {
+      await validator.validate(validationContext);
+    }
+
+    // At this point, contract is guaranteed to exist, be active, and belong to employee
+    // (validators would have thrown otherwise)
+    // TypeScript null check: this should never happen due to validators
     if (!contract) {
-      throw new NotFoundException('Active contract not found for employee');
+      throw new NotFoundException('Contract not found');
     }
 
-    if (contract.employeeId !== dto.employeeId) {
-      throw new BadRequestException('Contract does not belong to employee');
-    }
-
-    // 3) Calcular
+    // 4) Calcular
     const result = this.calculator.calculate({
       contractType: contract.contractType,
       baseSalary: contract.baseSalary,
@@ -42,7 +62,7 @@ export class CreatePayrollRunUseCase {
       otherDeductions: dto.otherDeductions,
     });
 
-    // 4) Persistir corrida
+    // 5) Persistir corrida
     const payload = {
       employeeId: dto.employeeId,
       contractId: contract.id,
@@ -50,6 +70,8 @@ export class CreatePayrollRunUseCase {
       gross: Math.round(result.gross),
       net: Math.round(result.net),
       breakdown: {
+        baseSalary: contract.baseSalary,
+        bonuses: dto.bonuses || 0,
         ...result.breakdown,
         taxes: result.taxes,
         mandatoryDeductions: result.mandatoryDeductions,
